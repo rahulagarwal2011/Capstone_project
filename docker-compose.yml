@@ -1,0 +1,81 @@
+services:
+  ray-head:
+    image: rayproject/ray:2.9.0-py311
+    container_name: reason-reduce-ray-head
+    ports:
+      - "6379:6379"
+      - "8265:8265"
+      - "10001:10001"
+    command: >
+      ray start --head --port=6379
+      --dashboard-host=0.0.0.0
+      --num-cpus=2
+      --block
+    environment:
+      - RAY_ENABLE_RECORD_ACTOR_TASK_LOGGING=1
+    volumes:
+      - ./src:/app/src
+    networks:
+      - reason-reduce
+
+  ray-worker-1:
+    image: rayproject/ray:2.9.0-py311
+    container_name: reason-reduce-worker-1
+    command: >
+      ray start --address=ray-head:6379
+      --num-cpus=2
+      --block
+    depends_on:
+      - ray-head
+    volumes:
+      - ./src:/app/src
+    networks:
+      - reason-reduce
+
+  ray-worker-2:
+    image: rayproject/ray:2.9.0-py311
+    container_name: reason-reduce-worker-2
+    command: >
+      ray start --address=ray-head:6379
+      --num-cpus=2
+      --block
+    depends_on:
+      - ray-head
+    volumes:
+      - ./src:/app/src
+    networks:
+      - reason-reduce
+
+  redis:
+    image: redis:7-alpine
+    container_name: reason-reduce-redis
+    ports:
+      - "6380:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - reason-reduce
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: reason-reduce-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/docker/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - reason-reduce
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: reason-reduce-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    networks:
+      - reason-reduce
+
+networks:
+  reason-reduce:
+    driver: bridge

@@ -1,0 +1,10 @@
+# Reason-Reduce Thresholds Configuration
+# All values are in [0, 1] unless otherwise noted.
+
+tau_confidence: 0.7
+tau_entropy: 0.5
+tau_consensus: 0.6
+tau_conflict_low: 0.3
+tau_conflict_high: 0.7
+max_workers: 4
+max_retries: 2
