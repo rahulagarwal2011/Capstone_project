@@ -16,6 +16,44 @@ from reason_reduce.monitoring.logger import get_logger
 
 logger = get_logger(__name__)
 
+_API_MODELS: dict[str, dict[str, str | float]] = {
+    "deepseek": {
+        "provider": "deepseek",
+        "model": "deepseek-chat",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "cost_per_1k_input": 0.0014,
+        "cost_per_1k_output": 0.0028,
+    },
+    "deepseek-reasoner": {
+        "provider": "deepseek",
+        "model": "deepseek-reasoner",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "cost_per_1k_input": 0.0055,
+        "cost_per_1k_output": 0.016,
+    },
+    "gpt-4o": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "api_key_env": "OPENAI_API_KEY",
+        "cost_per_1k_input": 0.005,
+        "cost_per_1k_output": 0.015,
+    },
+    "gpt-4o-mini": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "api_key_env": "OPENAI_API_KEY",
+        "cost_per_1k_input": 0.00015,
+        "cost_per_1k_output": 0.0006,
+    },
+    "groq-llama": {
+        "provider": "groq",
+        "model": "llama-3.1-70b-versatile",
+        "api_key_env": "GROQ_API_KEY",
+        "cost_per_1k_input": 0.00059,
+        "cost_per_1k_output": 0.00079,
+    },
+}
+
 
 @dataclass(frozen=True)
 class LLMResponse:
@@ -140,29 +178,68 @@ class ModelRegistry:
     def get(self, model_id: str) -> LLMAdapter:
         """Get or create an adapter for the given model.
 
+        Supports:
+            - "mock": deterministic mock (no network, no GPU)
+            - "deepseek": DeepSeek API via DEEPSEEK_API_KEY
+            - "deepseek-reasoner": DeepSeek R1 reasoning model
+            - "gpt-4o" / "gpt-4o-mini": OpenAI API via OPENAI_API_KEY
+            - Any model in registry: falls back to mock if no GPU
+
         Args:
-            model_id: Model name from the registry.
+            model_id: Model name from the registry or a known API model.
 
         Returns:
             An LLMAdapter instance.
 
         Raises:
-            KeyError: If model_id is not in the registry.
+            KeyError: If model_id is not recognized.
         """
+        if model_id in self._adapters:
+            return self._adapters[model_id]
+
         if model_id == "mock":
-            if "mock" not in self._adapters:
-                self._adapters["mock"] = MockLLMAdapter()
+            self._adapters["mock"] = MockLLMAdapter()
             return self._adapters["mock"]
 
+        api_adapter = self._try_create_api_adapter(model_id)
+        if api_adapter is not None:
+            self._adapters[model_id] = api_adapter
+            return api_adapter
+
         if model_id not in self._models:
-            msg = f"Model '{model_id}' not found in registry. Available: {list(self._models.keys())}"
+            msg = (
+                f"Model '{model_id}' not found. "
+                f"Available: {list(self._models.keys()) + list(_API_MODELS.keys())}"
+            )
             raise KeyError(msg)
 
-        if model_id not in self._adapters:
-            logger.info("adapter_created", model_id=model_id, adapter_type="mock_fallback")
-            self._adapters[model_id] = MockLLMAdapter(model_id=model_id)
-
+        logger.info("adapter_created", model_id=model_id, adapter_type="mock_fallback")
+        self._adapters[model_id] = MockLLMAdapter(model_id=model_id)
         return self._adapters[model_id]
+
+    def _try_create_api_adapter(self, model_id: str) -> LLMAdapter | None:
+        """Try to create an API adapter for the given model ID."""
+        from reason_reduce.models.api_adapter import APIConfig, OpenAICompatibleAdapter
+
+        if model_id not in _API_MODELS:
+            return None
+
+        config_kwargs = _API_MODELS[model_id]
+        config = APIConfig(**config_kwargs)
+
+        import os
+
+        if not os.environ.get(config.api_key_env):
+            logger.warning(
+                "api_key_not_set",
+                model=model_id,
+                env_var=config.api_key_env,
+                hint=f"Set {config.api_key_env} to use {model_id}",
+            )
+            return None
+
+        logger.info("api_adapter_created", model=model_id, provider=config.provider)
+        return OpenAICompatibleAdapter(config)
 
     def list_available(self) -> list[ModelInfo]:
         """List all registered models."""

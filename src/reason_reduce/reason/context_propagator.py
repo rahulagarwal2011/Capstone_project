@@ -8,8 +8,8 @@ TODO[Phase-2]: Full implementation with embedding similarity lookup.
 
 from __future__ import annotations
 
-from reason_reduce.reason.partitioner import Partition
 from reason_reduce.monitoring.logger import get_logger
+from reason_reduce.reason.partitioner import Partition
 
 logger = get_logger(__name__)
 

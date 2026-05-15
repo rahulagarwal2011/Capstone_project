@@ -37,5 +37,6 @@ class ConfidenceCalibrator:
         if not self._is_fitted:
             return raw_confidence
         import math
+
         logit = self._a * raw_confidence + self._b
         return 1.0 / (1.0 + math.exp(-logit))

@@ -1,60 +1,111 @@
 services:
+  # === Reason-Reduce App (runs pipeline, tests, benchmarks) ===
+  app:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.app
+    container_name: reason-reduce-app
+    environment:
+      - RAY_ADDRESS=ray://ray-head:10001
+      - REDIS_URL=redis://redis:6379/0
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - WANDB_PROJECT=reason-reduce
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_SERVICE_NAME=reason-reduce
+      - PYTHONPATH=/app/src
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./scripts:/app/scripts
+      - ./benchmarks:/app/benchmarks
+      - ./evaluation:/app/evaluation
+      - ./docs:/app/docs
+    depends_on:
+      - ray-head
+      - redis
+    networks:
+      - reason-reduce
+    stdin_open: true
+    tty: true
+
+  # === Ray Head Node ===
   ray-head:
     image: rayproject/ray:2.9.0-py311
     container_name: reason-reduce-ray-head
     ports:
-      - "6379:6379"
       - "8265:8265"
       - "10001:10001"
+      - "6379:6379"
     command: >
-      ray start --head --port=6379
-      --dashboard-host=0.0.0.0
-      --num-cpus=2
-      --block
+      bash -c "pip install pydantic pydantic-settings structlog pyyaml numpy scikit-learn
+      jinja2 opentelemetry-api opentelemetry-sdk prometheus-client httpx sentence-transformers &&
+      ray start --head --port=6379 --dashboard-host=0.0.0.0 --num-cpus=4 --block"
     environment:
       - RAY_ENABLE_RECORD_ACTOR_TASK_LOGGING=1
     volumes:
       - ./src:/app/src
     networks:
       - reason-reduce
+    healthcheck:
+      test: ["CMD", "ray", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # === Ray Worker 1 ===
   ray-worker-1:
     image: rayproject/ray:2.9.0-py311
     container_name: reason-reduce-worker-1
     command: >
-      ray start --address=ray-head:6379
-      --num-cpus=2
-      --block
+      bash -c "pip install pydantic pydantic-settings structlog pyyaml numpy scikit-learn
+      jinja2 opentelemetry-api opentelemetry-sdk prometheus-client httpx sentence-transformers &&
+      ray start --address=ray-head:6379 --num-cpus=2 --block"
     depends_on:
-      - ray-head
+      ray-head:
+        condition: service_healthy
     volumes:
       - ./src:/app/src
+    environment:
+      - PYTHONPATH=/app/src
     networks:
       - reason-reduce
 
+  # === Ray Worker 2 ===
   ray-worker-2:
     image: rayproject/ray:2.9.0-py311
     container_name: reason-reduce-worker-2
     command: >
-      ray start --address=ray-head:6379
-      --num-cpus=2
-      --block
+      bash -c "pip install pydantic pydantic-settings structlog pyyaml numpy scikit-learn
+      jinja2 opentelemetry-api opentelemetry-sdk prometheus-client httpx sentence-transformers &&
+      ray start --address=ray-head:6379 --num-cpus=2 --block"
     depends_on:
-      - ray-head
+      ray-head:
+        condition: service_healthy
     volumes:
       - ./src:/app/src
+    environment:
+      - PYTHONPATH=/app/src
     networks:
       - reason-reduce
 
+  # === Redis (embedding cache + coordination) ===
   redis:
     image: redis:7-alpine
     container_name: reason-reduce-redis
     ports:
       - "6380:6379"
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
     networks:
       - reason-reduce
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
+  # === Prometheus (metrics collection) ===
   prometheus:
     image: prom/prometheus:v2.48.0
     container_name: reason-reduce-prometheus
@@ -65,6 +116,7 @@ services:
     networks:
       - reason-reduce
 
+  # === Grafana (dashboards) ===
   grafana:
     image: grafana/grafana:10.2.0
     container_name: reason-reduce-grafana
@@ -73,6 +125,18 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_AUTH_ANONYMOUS_ENABLED=true
+    networks:
+      - reason-reduce
+
+  # === Jaeger (distributed tracing) ===
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: reason-reduce-jaeger
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     networks:
       - reason-reduce
 

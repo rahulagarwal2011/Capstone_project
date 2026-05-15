@@ -7,9 +7,9 @@ TODO[Phase-3]: Full Ray-based tree reduction with configurable fanout.
 
 from __future__ import annotations
 
+from reason_reduce.monitoring.logger import get_logger
 from reason_reduce.reason.worker import ReasonOutput
 from reason_reduce.reduce.consensus import ConsensusResult, reach_consensus
-from reason_reduce.monitoring.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -39,7 +39,7 @@ def aggregate(
         groups[key].append(output)
 
     results: list[ConsensusResult] = []
-    for key, group_outputs in groups.items():
+    for _key, group_outputs in groups.items():
         result = reach_consensus(group_outputs, strategy=strategy)  # type: ignore[arg-type]
         results.append(result)
 

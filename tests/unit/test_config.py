@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from reason_reduce.config.loader import ThresholdSettings, Settings, load_settings
+from reason_reduce.config.loader import Settings, ThresholdSettings, load_settings
 
 
 class TestThresholdSettings:

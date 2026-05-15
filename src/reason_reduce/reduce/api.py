@@ -7,13 +7,14 @@ producing posterior confidence scores.
 
 from __future__ import annotations
 
-from typing import Callable, Literal
+from collections.abc import Callable
+from typing import Literal
 
+from reason_reduce.monitoring.logger import get_logger
 from reason_reduce.reason.worker import ReasonOutput
 from reason_reduce.reduce.aggregator import aggregate
 from reason_reduce.reduce.conflict import ConflictPolicy
 from reason_reduce.reduce.consensus import ConsensusResult
-from reason_reduce.monitoring.logger import get_logger
 
 logger = get_logger(__name__)
 

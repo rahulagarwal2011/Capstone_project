@@ -61,12 +61,8 @@ class TestMassFunction:
         Combined: P(burglar) should be higher than either individual.
         """
         frame = frozenset(["burglar", "not_burglar"])
-        w1 = MassFunction(
-            masses={frozenset(["burglar"]): 0.8, frame: 0.2}, frame=frame
-        )
-        w2 = MassFunction(
-            masses={frozenset(["burglar"]): 0.5, frame: 0.5}, frame=frame
-        )
+        w1 = MassFunction(masses={frozenset(["burglar"]): 0.8, frame: 0.2}, frame=frame)
+        w2 = MassFunction(masses={frozenset(["burglar"]): 0.5, frame: 0.5}, frame=frame)
         combined, k = w1.combine(w2)
         assert combined.masses[frozenset(["burglar"])] > 0.8
         assert k < 1.0
@@ -89,8 +85,7 @@ class TestCombineMultiple:
     def test_many_agreeing_converges(self) -> None:
         frame = frozenset(["A", "B"])
         mfs = [
-            MassFunction(masses={frozenset(["A"]): 0.6, frame: 0.4}, frame=frame)
-            for _ in range(5)
+            MassFunction(masses={frozenset(["A"]): 0.6, frame: 0.4}, frame=frame) for _ in range(5)
         ]
         result, _ = combine_multiple(mfs)
         assert result.masses[frozenset(["A"])] > 0.9

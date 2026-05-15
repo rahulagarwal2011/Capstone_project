@@ -18,11 +18,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Protocol
 
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering, SpectralClustering
-from sklearn.metrics import silhouette_score
 from sklearn.metrics.pairwise import cosine_similarity
 
 from reason_reduce.ingestion.batch import Doc
@@ -57,9 +55,7 @@ class PartitionerStrategy(ABC):
     """
 
     @abstractmethod
-    def fit_predict(
-        self, embeddings: np.ndarray, n_partitions: int, seed: int
-    ) -> np.ndarray:
+    def fit_predict(self, embeddings: np.ndarray, n_partitions: int, seed: int) -> np.ndarray:
         """Assign documents to partitions based on embeddings.
 
         Args:
@@ -80,9 +76,7 @@ class AgglomerativePartitioner(PartitionerStrategy):
     Works well for balanced cluster sizes and moderate n_docs.
     """
 
-    def fit_predict(
-        self, embeddings: np.ndarray, n_partitions: int, seed: int
-    ) -> np.ndarray:
+    def fit_predict(self, embeddings: np.ndarray, n_partitions: int, seed: int) -> np.ndarray:
         distance_matrix = 1.0 - cosine_similarity(embeddings)
         np.fill_diagonal(distance_matrix, 0.0)
         distance_matrix = np.clip(distance_matrix, 0.0, 2.0)
@@ -104,9 +98,7 @@ class SpectralPartitioner(PartitionerStrategy):
     cluster shapes than agglomerative.
     """
 
-    def fit_predict(
-        self, embeddings: np.ndarray, n_partitions: int, seed: int
-    ) -> np.ndarray:
+    def fit_predict(self, embeddings: np.ndarray, n_partitions: int, seed: int) -> np.ndarray:
         affinity = cosine_similarity(embeddings)
         affinity = np.clip(affinity, 0.0, 1.0)
         np.fill_diagonal(affinity, 1.0)
@@ -128,12 +120,10 @@ class HDBSCANPartitioner(PartitionerStrategy):
     Falls back to agglomerative if HDBSCAN finds fewer clusters than requested.
     """
 
-    def fit_predict(
-        self, embeddings: np.ndarray, n_partitions: int, seed: int
-    ) -> np.ndarray:
+    def fit_predict(self, embeddings: np.ndarray, n_partitions: int, seed: int) -> np.ndarray:
         try:
-            from umap import UMAP
             from hdbscan import HDBSCAN
+            from umap import UMAP
 
             reduced = UMAP(
                 n_components=min(50, embeddings.shape[1]),
@@ -249,10 +239,7 @@ def partition_documents(
     n_partitions = min(n_partitions, len(docs))
 
     if n_partitions >= len(docs):
-        return [
-            Partition(id=i, docs=[doc], coherence_score=1.0)
-            for i, doc in enumerate(docs)
-        ]
+        return [Partition(id=i, docs=[doc], coherence_score=1.0) for i, doc in enumerate(docs)]
 
     if strategy == "random":
         rng = np.random.default_rng(seed)
@@ -303,9 +290,7 @@ def partition_documents(
         else:
             partitions.append(Partition(id=0, docs=noise_docs))
 
-    mean_coherence = (
-        np.mean([p.coherence_score for p in partitions]) if partitions else 0.0
-    )
+    mean_coherence = np.mean([p.coherence_score for p in partitions]) if partitions else 0.0
 
     logger.info(
         "partitioning_complete",

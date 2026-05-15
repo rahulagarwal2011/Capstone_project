@@ -2,6 +2,22 @@
 # Each entry describes a model available for the reason() operator.
 
 models:
+  # === API Models (no GPU needed, works on MacBook M4) ===
+  - name: deepseek
+    hf_id: deepseek-ai/deepseek-chat
+    vram_gb: 0.0
+    ctx_len: 65536
+    quantization: none
+    cost_per_1k: 0.0014
+
+  - name: deepseek-reasoner
+    hf_id: deepseek-ai/deepseek-reasoner
+    vram_gb: 0.0
+    ctx_len: 65536
+    quantization: none
+    cost_per_1k: 0.0055
+
+  # === Local Models (for vLLM on HPC cluster) ===
   - name: mistral-7b
     hf_id: mistralai/Mistral-7B-Instruct-v0.3
     vram_gb: 5.0

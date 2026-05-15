@@ -18,10 +18,8 @@ data-parallel processing framework is, to our knowledge, novel."
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Literal
 
 import numpy as np
 
@@ -83,8 +81,7 @@ class MassFunction:
             Belief value in [0, 1].
         """
         return sum(
-            mass for subset, mass in self.masses.items()
-            if subset <= hypothesis and len(subset) > 0
+            mass for subset, mass in self.masses.items() if subset <= hypothesis and len(subset) > 0
         )
 
     def plausibility(self, hypothesis: frozenset[str]) -> float:
@@ -99,8 +96,7 @@ class MassFunction:
             Plausibility value in [0, 1].
         """
         return sum(
-            mass for subset, mass in self.masses.items()
-            if subset & hypothesis and len(subset) > 0
+            mass for subset, mass in self.masses.items() if subset & hypothesis and len(subset) > 0
         )
 
     def pignistic_probability(self) -> dict[str, float]:
@@ -167,9 +163,7 @@ class MassFunction:
                 if not intersection:
                     conflict += product
                 else:
-                    combined_raw[intersection] = (
-                        combined_raw.get(intersection, 0.0) + product
-                    )
+                    combined_raw[intersection] = combined_raw.get(intersection, 0.0) + product
 
         if abs(conflict - 1.0) < 1e-10:
             msg = "Total conflict (K=1.0): evidence sources are completely contradictory"
@@ -207,9 +201,7 @@ class MassFunction:
                 if not intersection:
                     conflict += product
                 else:
-                    combined_raw[intersection] = (
-                        combined_raw.get(intersection, 0.0) + product
-                    )
+                    combined_raw[intersection] = combined_raw.get(intersection, 0.0) + product
 
         combined_raw[self.frame] = combined_raw.get(self.frame, 0.0) + conflict
 

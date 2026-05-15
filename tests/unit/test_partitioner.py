@@ -5,15 +5,12 @@ from __future__ import annotations
 import pytest
 
 from reason_reduce.ingestion.batch import Doc
-from reason_reduce.reason.partitioner import Partition, partition_documents
+from reason_reduce.reason.partitioner import partition_documents
 
 
 @pytest.fixture
 def sample_docs() -> list[Doc]:
-    return [
-        Doc(id=str(i), text=f"Document {i} about topic {i % 3}")
-        for i in range(30)
-    ]
+    return [Doc(id=str(i), text=f"Document {i} about topic {i % 3}") for i in range(30)]
 
 
 class TestPartitioner:

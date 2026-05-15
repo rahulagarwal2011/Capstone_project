@@ -11,15 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from reason_reduce.monitoring.logger import get_logger
 from reason_reduce.reason.worker import ReasonOutput
 from reason_reduce.reduce.dempster_shafer import (
-    MassFunction,
     combine_multiple,
     reason_output_to_mass,
-    combine_murphy,
-    CombinationRule,
 )
-from reason_reduce.monitoring.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -85,8 +82,11 @@ def _majority_vote(outputs: list[ReasonOutput]) -> ConsensusResult:
 
     if not vote_weights:
         return ConsensusResult(
-            key=outputs[0].key, value="", confidence=0.0,
-            n_sources=len(outputs), strategy="majority",
+            key=outputs[0].key,
+            value="",
+            confidence=0.0,
+            n_sources=len(outputs),
+            strategy="majority",
         )
 
     winner = max(vote_weights, key=vote_weights.get)  # type: ignore[arg-type]
@@ -102,24 +102,23 @@ def _majority_vote(outputs: list[ReasonOutput]) -> ConsensusResult:
     )
 
 
-def _dempster_shafer(
-    outputs: list[ReasonOutput], frame: frozenset[str] | None
-) -> ConsensusResult:
+def _dempster_shafer(outputs: list[ReasonOutput], frame: frozenset[str] | None) -> ConsensusResult:
     """Dempster-Shafer evidence combination."""
     if frame is None:
         values = {o.value for o in outputs if o.value is not None}
         frame = frozenset(values) if values else frozenset(["unknown"])
 
     mass_functions = [
-        reason_output_to_mass(o.value, o.confidence, frame)
-        for o in outputs
-        if o.confidence > 0.0
+        reason_output_to_mass(o.value, o.confidence, frame) for o in outputs if o.confidence > 0.0
     ]
 
     if not mass_functions:
         return ConsensusResult(
-            key=outputs[0].key, value="", confidence=0.0,
-            n_sources=len(outputs), strategy="ds",
+            key=outputs[0].key,
+            value="",
+            confidence=0.0,
+            n_sources=len(outputs),
+            strategy="ds",
         )
 
     if len(mass_functions) == 1:
@@ -131,8 +130,12 @@ def _dempster_shafer(
         )
         value = next(iter(best_singleton[0])) if best_singleton[0] else ""
         return ConsensusResult(
-            key=outputs[0].key, value=value, confidence=best_singleton[1],
-            n_sources=len(outputs), conflict_mass=0.0, strategy="ds",
+            key=outputs[0].key,
+            value=value,
+            confidence=best_singleton[1],
+            n_sources=len(outputs),
+            conflict_mass=0.0,
+            strategy="ds",
         )
 
     combined, max_k = combine_multiple(mass_functions)

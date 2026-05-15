@@ -28,8 +28,13 @@ class TestDistributedReason:
 
         local_results = reason(sample_docs, task=task, model="mock", n_partitions=2, seed=42)
         distributed_results = reason(
-            sample_docs, task=task, model="mock", n_partitions=2, seed=42,
-            distributed=True, n_workers=2,
+            sample_docs,
+            task=task,
+            model="mock",
+            n_partitions=2,
+            seed=42,
+            distributed=True,
+            n_workers=2,
         )
 
         assert len(distributed_results) == len(local_results)

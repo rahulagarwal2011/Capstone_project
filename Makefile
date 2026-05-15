@@ -1,4 +1,4 @@
-.PHONY: smoke test lint format bench docker k8s clean install dev
+.PHONY: smoke test lint format bench docker-up docker-down docker-build docker-shell docker-smoke docker-test docker-lint docker-logs k8s clean install dev
 
 install:
 	uv pip install -e ".[dev]"
@@ -34,6 +34,31 @@ docker-up:
 
 docker-down:
 	docker compose down -v
+
+docker-build:
+	docker compose build app
+
+docker-shell:
+	docker compose exec app bash
+
+docker-smoke:
+	docker compose exec app python scripts/smoke.py
+
+docker-test:
+	docker compose exec app pytest tests/ -q
+
+docker-lint:
+	docker compose exec app ruff check src/ tests/
+
+docker-logs:
+	docker compose logs -f app ray-head
+
+# === Phase Validation ===
+phase1-validate:
+	PYTHONPATH=src python scripts/validate_phase1.py
+
+docker-phase1:
+	docker compose exec app python scripts/validate_phase1.py
 
 k8s-local:
 	kind create cluster --name reason-reduce

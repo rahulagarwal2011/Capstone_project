@@ -90,5 +90,8 @@ def resolve_conflict(
         )
 
     return ConflictResolution(
-        resolved=False, value=None, method="no_candidates", trace="No candidates to resolve",
+        resolved=False,
+        value=None,
+        method="no_candidates",
+        trace="No candidates to resolve",
     )

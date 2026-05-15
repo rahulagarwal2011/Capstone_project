@@ -98,8 +98,11 @@ class VLLMLocalAdapter:
 
         if not self._is_available:
             response = await self._fallback.generate(
-                prompt=prompt, max_tokens=max_tokens,
-                temperature=temperature, seed=seed, logprobs=logprobs,
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                seed=seed,
+                logprobs=logprobs,
             )
             return LLMResponse(
                 text=response.text,
@@ -142,7 +145,7 @@ class VLLMLocalAdapter:
                                         top_lp = max(token_logprob.values())
                                         all_logprobs.append(top_lp)
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     "vllm_timeout",
                     request_id=request_id,
@@ -171,22 +174,31 @@ class VLLMLocalAdapter:
                     error=str(e),
                 )
                 return LLMResponse(
-                    text="", logprobs=[], finish_reason="oom",
-                    latency_ms=elapsed_ms, model_id=self._config.model_id,
+                    text="",
+                    logprobs=[],
+                    finish_reason="oom",
+                    latency_ms=elapsed_ms,
+                    model_id=self._config.model_id,
                 )
 
             logger.error("vllm_runtime_error", error=str(e))
             return LLMResponse(
-                text="", logprobs=[], finish_reason="error",
-                latency_ms=elapsed_ms, model_id=self._config.model_id,
+                text="",
+                logprobs=[],
+                finish_reason="error",
+                latency_ms=elapsed_ms,
+                model_id=self._config.model_id,
             )
 
         except Exception as e:
             elapsed_ms = (time.perf_counter() - start) * 1000
             logger.error("vllm_generation_failed", error=str(e), model=self._config.model_id)
             return LLMResponse(
-                text="", logprobs=[], finish_reason="error",
-                latency_ms=elapsed_ms, model_id=self._config.model_id,
+                text="",
+                logprobs=[],
+                finish_reason="error",
+                latency_ms=elapsed_ms,
+                model_id=self._config.model_id,
             )
 
     async def _init_engine(self) -> object:

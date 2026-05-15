@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator
 
 from reason_reduce.monitoring.logger import get_logger
 

@@ -35,10 +35,7 @@ class TestReasonReduceE2E:
     """End-to-end tests for the full reason → reason_reduce pipeline."""
 
     def test_full_pipeline(self) -> None:
-        docs = [
-            Doc(id=str(i), text=f"Document {i} about entity_{i % 3}")
-            for i in range(10)
-        ]
+        docs = [Doc(id=str(i), text=f"Document {i} about entity_{i % 3}") for i in range(10)]
 
         reason_results = reason(docs, task=TaskSpec(task_type="ner"), model="mock")
         assert len(reason_results) == 10

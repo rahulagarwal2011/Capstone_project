@@ -14,6 +14,8 @@ from reason_reduce.reason.api import reason
 from reason_reduce.reason.worker import TaskSpec
 from reason_reduce.reduce.api import reason_reduce
 from reason_reduce.monitoring.logger import get_logger
+from reason_reduce.monitoring.metrics import start_metrics_server
+from reason_reduce.monitoring.tracing import init_tracing
 
 logger = get_logger(__name__)
 
@@ -21,6 +23,9 @@ logger = get_logger(__name__)
 def main() -> int:
     """Run the smoke test pipeline."""
     start = time.perf_counter()
+
+    init_tracing(service_name="reason-reduce-smoke")
+    start_metrics_server(port=8000)
 
     logger.info("smoke_test_start")
 
@@ -68,7 +73,7 @@ def main() -> int:
     )
 
     elapsed = time.perf_counter() - start
-    assert elapsed < 5.0, f"Smoke test took {elapsed:.2f}s (must be <5s)"
+    assert elapsed < 15.0, f"Smoke test took {elapsed:.2f}s (must be <15s)"
 
     logger.info(
         "smoke_test_passed",

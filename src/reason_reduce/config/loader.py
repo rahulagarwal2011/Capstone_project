@@ -43,7 +43,7 @@ class ThresholdSettings(BaseSettings):
 
     @field_validator("tau_conflict_high")
     @classmethod
-    def conflict_high_gt_low(cls, v: float, info: Any) -> float:
+    def conflict_high_gt_low(cls, v: float, info: object) -> float:
         """Ensure high conflict threshold exceeds low threshold."""
         low = info.data.get("tau_conflict_low", 0.3)
         if v <= low:

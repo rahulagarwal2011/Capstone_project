@@ -7,7 +7,7 @@ and JSON serialization for reproducibility.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from reason_reduce.monitoring.logger import get_logger
 

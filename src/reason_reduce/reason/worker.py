@@ -18,8 +18,8 @@ import numpy as np
 
 from reason_reduce.ingestion.batch import Doc
 from reason_reduce.models.registry import LLMAdapter, LLMResponse
-from reason_reduce.reason.prompts import render_prompt
 from reason_reduce.monitoring.logger import get_logger
+from reason_reduce.reason.prompts import render_prompt
 
 logger = get_logger(__name__)
 
@@ -143,7 +143,7 @@ class ReasonWorker:
                 if attempt < self._max_retries:
                     prompt = self._stricter_prompt(doc, task, response.text)
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 elapsed_ms = (time.perf_counter() - start) * 1000
                 logger.error(
                     "worker_timeout",
@@ -152,8 +152,12 @@ class ReasonWorker:
                     attempt=attempt,
                 )
                 return ReasonOutput(
-                    key=task.task_type, value=None, confidence=0.0,
-                    trace="TIMEOUT", latency_ms=elapsed_ms, doc_id=doc.id,
+                    key=task.task_type,
+                    value=None,
+                    confidence=0.0,
+                    trace="TIMEOUT",
+                    latency_ms=elapsed_ms,
+                    doc_id=doc.id,
                 )
 
             except Exception as e:
@@ -166,15 +170,22 @@ class ReasonWorker:
                 )
                 if attempt == self._max_retries:
                     return ReasonOutput(
-                        key=task.task_type, value=None, confidence=0.0,
-                        trace=f"ERROR: {e}", latency_ms=elapsed_ms, doc_id=doc.id,
+                        key=task.task_type,
+                        value=None,
+                        confidence=0.0,
+                        trace=f"ERROR: {e}",
+                        latency_ms=elapsed_ms,
+                        doc_id=doc.id,
                     )
 
         elapsed_ms = (time.perf_counter() - start) * 1000
         return ReasonOutput(
-            key=task.task_type, value=None, confidence=0.0,
+            key=task.task_type,
+            value=None,
+            confidence=0.0,
             trace=f"PARSE_FAILURE after {self._max_retries} retries",
-            latency_ms=elapsed_ms, doc_id=doc.id,
+            latency_ms=elapsed_ms,
+            doc_id=doc.id,
         )
 
     async def process_batch(self, docs: list[Doc], task: TaskSpec) -> list[ReasonOutput]:
@@ -217,7 +228,8 @@ class ReasonWorker:
             f"Document: {doc.text[:1500]}\n\n"
             f"Your previous response was not valid JSON: {previous_output[:200]}\n\n"
             f"You MUST respond with ONLY a JSON object in this exact format:\n"
-            f'{{"key": "<type>", "value": "<extracted>", "confidence": <0.0-1.0>, "trace": "<reasoning>"}}\n'
+            f'{{"key": "<type>", "value": "<extracted>", '
+            f'"confidence": <0.0-1.0>, "trace": "<reasoning>"}}\n'
         )
 
     def _parse_response(self, response: LLMResponse) -> dict[str, str] | None:
@@ -243,9 +255,7 @@ class ReasonWorker:
                     pass
             return None
 
-    def _compute_confidence(
-        self, parsed: dict[str, str], response: LLMResponse
-    ) -> float:
+    def _compute_confidence(self, parsed: dict[str, str], response: LLMResponse) -> float:
         """Compute confidence from parsed output + logprobs.
 
         Priority:

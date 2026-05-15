@@ -13,8 +13,9 @@ class TestFullPipelineSmall:
 
     def test_10_docs_end_to_end(self) -> None:
         """10 docs → reason() → reason_reduce() → assert outputs exist."""
+        drugs = ["aspirin", "ibuprofen", "paracetamol"]
         docs = [
-            Doc(id=str(i), text=f"Patient received {['aspirin', 'ibuprofen', 'paracetamol'][i % 3]} for treatment.")
+            Doc(id=str(i), text=f"Patient received {drugs[i % 3]} for treatment.")
             for i in range(10)
         ]
 

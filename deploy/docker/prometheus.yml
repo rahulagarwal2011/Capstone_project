@@ -3,11 +3,12 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'reason-reduce'
+  - job_name: 'reason-reduce-app'
     static_configs:
-      - targets: ['ray-head:8265']
+      - targets: ['app:8000']
     metrics_path: /metrics
 
   - job_name: 'ray-dashboard'
     static_configs:
       - targets: ['ray-head:8265']
+    metrics_path: /metrics

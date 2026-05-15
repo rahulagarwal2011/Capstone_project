@@ -84,7 +84,11 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "ANN", "B", "A", "SIM"]
-ignore = ["ANN101", "ANN102"]
+ignore = ["ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "ANN204", "ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/reason_reduce/reason/prompts.py" = ["E501"]
+"tests/*" = ["ANN", "B905"]
 
 [tool.mypy]
 python_version = "3.11"

@@ -18,9 +18,7 @@ class TestMockLLMAdapter:
 
     def test_returns_default_response(self) -> None:
         adapter = MockLLMAdapter()
-        response = asyncio.get_event_loop().run_until_complete(
-            adapter.generate("test prompt")
-        )
+        response = asyncio.get_event_loop().run_until_complete(adapter.generate("test prompt"))
         assert isinstance(response, LLMResponse)
         assert response.finish_reason == "stop"
         assert response.model_id == "mock"
@@ -42,9 +40,7 @@ class TestMockLLMAdapter:
 
     def test_logprobs_present(self) -> None:
         adapter = MockLLMAdapter()
-        response = asyncio.get_event_loop().run_until_complete(
-            adapter.generate("test", logprobs=5)
-        )
+        response = asyncio.get_event_loop().run_until_complete(adapter.generate("test", logprobs=5))
         assert len(response.logprobs) == 5
         assert all(lp < 0 for lp in response.logprobs)
 

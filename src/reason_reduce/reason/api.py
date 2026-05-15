@@ -12,17 +12,21 @@ Supports two execution modes:
 from __future__ import annotations
 
 import asyncio
+import time
+import uuid
 from typing import TYPE_CHECKING
 
 from reason_reduce.ingestion.batch import Doc
 from reason_reduce.models.registry import ModelRegistry
-from reason_reduce.reason.partitioner import partition_documents
-from reason_reduce.reason.context_propagator import get_partition_context
-from reason_reduce.reason.worker import ReasonOutput, ReasonWorker, TaskSpec
 from reason_reduce.monitoring.logger import get_logger
+from reason_reduce.monitoring.metrics import ACTIVE_WORKERS, record_reason_request
+from reason_reduce.monitoring.tracing import get_tracer, set_correlation_id
+from reason_reduce.reason.context_propagator import get_partition_context
+from reason_reduce.reason.partitioner import partition_documents
+from reason_reduce.reason.worker import ReasonOutput, ReasonWorker, TaskSpec
 
 if TYPE_CHECKING:
-    from reason_reduce.api.rdd import ReasonRDD
+    pass
 
 logger = get_logger(__name__)
 
@@ -67,22 +71,55 @@ def reason(
     if task is None:
         task = TaskSpec()
 
-    partitions = partition_documents(data, n_partitions=n_partitions, seed=seed)
+    correlation_id = str(uuid.uuid4())[:8]
+    set_correlation_id(correlation_id)
+    tracer = get_tracer(__name__)
 
-    if distributed:
-        results = _run_distributed(partitions, task, model, n_workers)
-    else:
-        results = _run_local(partitions, task, model)
+    with tracer.start_as_current_span(
+        "reason",
+        attributes={
+            "reason.n_docs": len(data),
+            "reason.model": model,
+            "reason.seed": seed,
+            "reason.correlation_id": correlation_id,
+        },
+    ) as span:
+        start_time = time.perf_counter()
+        partitions = partition_documents(data, n_partitions=n_partitions, seed=seed)
+        span.set_attribute("reason.n_partitions", len(partitions))
 
-    logger.info(
-        "reason_complete",
-        n_docs=len(data),
-        n_results=len(results),
-        model=model,
-        distributed=distributed,
-        mean_confidence=sum(r.confidence for r in results) / max(len(results), 1),
-    )
-    return results
+        ACTIVE_WORKERS.set(n_workers if distributed else 1)
+
+        if distributed:
+            results = _run_distributed(partitions, task, model, n_workers)
+        else:
+            results = _run_local(partitions, task, model)
+
+        elapsed_s = time.perf_counter() - start_time
+        mean_conf = sum(r.confidence for r in results) / max(len(results), 1)
+
+        for r in results:
+            record_reason_request(
+                model=r.model_id,
+                task=task.task_type,
+                status="ok" if r.confidence > 0 else "failed",
+                latency_s=r.latency_ms / 1000,
+                confidence=r.confidence,
+            )
+
+        span.set_attribute("reason.mean_confidence", mean_conf)
+        span.set_attribute("reason.elapsed_seconds", elapsed_s)
+
+        logger.info(
+            "reason_complete",
+            n_docs=len(data),
+            n_results=len(results),
+            model=model,
+            distributed=distributed,
+            mean_confidence=mean_conf,
+            correlation_id=correlation_id,
+        )
+        return results
 
 
 def _run_local(
@@ -106,9 +143,7 @@ def _run_local(
                 partition_id=partition.id,
                 partition_context=context,
             )
-            batch_results = loop.run_until_complete(
-                worker.process_batch(partition.docs, task)
-            )
+            batch_results = loop.run_until_complete(worker.process_batch(partition.docs, task))
             results.extend(batch_results)
     finally:
         loop.close()

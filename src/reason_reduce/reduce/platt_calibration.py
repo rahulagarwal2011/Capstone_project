@@ -44,5 +44,6 @@ class PlattCalibrator:
             return raw_score
 
         import math
+
         logit = self.a * raw_score + self.b
         return 1.0 / (1.0 + math.exp(-logit))

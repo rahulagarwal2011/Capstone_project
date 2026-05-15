@@ -181,7 +181,6 @@ def create_reason_worker_pool(
 
         def __init__(self, worker_id: int, model_id: str) -> None:
             from reason_reduce.reason.worker import ReasonWorker
-            from reason_reduce.models.registry import ModelRegistry
 
             self._worker_id = worker_id
             registry = ModelRegistry()
@@ -199,7 +198,6 @@ def create_reason_worker_pool(
             Returns:
                 Serialized ReasonOutput as dict.
             """
-            import asyncio
             from reason_reduce.ingestion.batch import Doc
             from reason_reduce.reason.worker import TaskSpec
 
@@ -231,7 +229,7 @@ def create_reason_worker_pool(
             }
 
     if num_gpus_per_worker > 0:
-        RemoteReasonWorker = ray.remote(num_gpus=num_gpus_per_worker)(  # type: ignore[misc]
+        RemoteReasonWorker = ray.remote(num_gpus=num_gpus_per_worker)(  # type: ignore[misc]  # noqa: N806
             RemoteReasonWorker.__wrapped__  # type: ignore[attr-defined]
         )
 
