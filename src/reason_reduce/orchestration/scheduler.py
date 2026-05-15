@@ -51,11 +51,20 @@ def init_cluster(local: bool = True, n_workers: int = 4) -> ClusterInfo:
 
     if local:
         if not ray.is_initialized():
-            ray.init(
-                num_cpus=n_workers,
-                ignore_reinit_error=True,
-                logging_level="WARNING",
-            )
+            # ray.init reads RAY_ADDRESS from env when address is unset,
+            # which would silently flip us into remote mode and conflict
+            # with num_cpus. Drop it for the duration of this call so
+            # local=True actually means local.
+            prev_addr = os.environ.pop("RAY_ADDRESS", None)
+            try:
+                ray.init(
+                    num_cpus=n_workers,
+                    ignore_reinit_error=True,
+                    logging_level="WARNING",
+                )
+            finally:
+                if prev_addr is not None:
+                    os.environ["RAY_ADDRESS"] = prev_addr
         logger.info("ray_cluster_init", mode="local", n_workers=n_workers)
         nodes = ray.nodes()
         return ClusterInfo(

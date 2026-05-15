@@ -16,6 +16,7 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 import subprocess
@@ -125,13 +126,24 @@ def main() -> int:
         check("smoke_pipeline", False, str(e))
 
     # 7. Ray cluster (if available)
+    # If RAY_ADDRESS is set, connect to that cluster; otherwise spin up a
+    # local one. Passing num_cpus to a remote cluster is rejected by Ray.
     try:
         import ray
 
         from reason_reduce.orchestration.scheduler import init_cluster, shutdown_cluster
 
-        cluster = init_cluster(local=True, n_workers=4)
-        check("ray_cluster", cluster.mode == "local" and cluster.n_workers == 4)
+        use_local = "RAY_ADDRESS" not in os.environ
+        cluster = init_cluster(local=use_local, n_workers=4)
+        if use_local:
+            ok = cluster.mode == "local" and cluster.n_workers == 4
+        else:
+            ok = cluster.mode == "remote" and cluster.n_workers >= 1
+        check(
+            "ray_cluster",
+            ok,
+            f"mode={cluster.mode}, workers={cluster.n_workers}",
+        )
         shutdown_cluster()
     except ImportError:
         check("ray_cluster", False, "ray not installed")

@@ -1,0 +1,21 @@
+FROM rayproject/ray:2.55.0-py311
+
+# Make pip resilient to slow/unstable PyPI connections
+ENV PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=10
+
+# Pre-install the Python deps that reason-reduce code needs on every Ray node.
+# Baking these into the image avoids the slow startup `pip install` that was
+# making ray-head fail its healthcheck.
+RUN pip install --no-cache-dir \
+    pydantic pydantic-settings structlog pyyaml numpy scikit-learn \
+    jinja2 opentelemetry-api opentelemetry-sdk prometheus-client httpx
+
+# CPU-only torch from PyTorch's CDN — much smaller and faster than the default
+# CUDA wheel from PyPI. sentence-transformers will then reuse it.
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://pypi.org/simple \
+    torch
+RUN pip install --no-cache-dir sentence-transformers
+

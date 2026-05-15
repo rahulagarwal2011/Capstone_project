@@ -32,16 +32,21 @@ services:
 
   # === Ray Head Node ===
   ray-head:
-    image: rayproject/ray:2.9.0-py311
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.ray
+    image: reason-reduce-ray:latest
     container_name: reason-reduce-ray-head
     ports:
       - "8265:8265"
       - "10001:10001"
       - "6379:6379"
+    # `--node-ip-address` is set explicitly so the head's raylet always
+    # registers with the right interface — auto-detection has been flaky
+    # across container restarts on user-defined bridge networks.
     command: >
-      bash -c "pip install pydantic pydantic-settings structlog pyyaml numpy scikit-learn
-      jinja2 opentelemetry-api opentelemetry-sdk prometheus-client httpx sentence-transformers &&
-      ray start --head --port=6379 --dashboard-host=0.0.0.0 --num-cpus=4 --block"
+      bash -c "ray start --head --port=6379 --dashboard-host=0.0.0.0
+      --num-cpus=4 --node-ip-address=$$(hostname -i) --block"
     environment:
       - RAY_ENABLE_RECORD_ACTOR_TASK_LOGGING=1
     volumes:
@@ -56,12 +61,11 @@ services:
 
   # === Ray Worker 1 ===
   ray-worker-1:
-    image: rayproject/ray:2.9.0-py311
+    image: reason-reduce-ray:latest
     container_name: reason-reduce-worker-1
     command: >
-      bash -c "pip install pydantic pydantic-settings structlog pyyaml numpy scikit-learn
-      jinja2 opentelemetry-api opentelemetry-sdk prometheus-client httpx sentence-transformers &&
-      ray start --address=ray-head:6379 --num-cpus=2 --block"
+      bash -c "ray start --address=ray-head:6379 --num-cpus=2
+      --node-ip-address=$$(hostname -i) --block"
     depends_on:
       ray-head:
         condition: service_healthy
@@ -74,12 +78,11 @@ services:
 
   # === Ray Worker 2 ===
   ray-worker-2:
-    image: rayproject/ray:2.9.0-py311
+    image: reason-reduce-ray:latest
     container_name: reason-reduce-worker-2
     command: >
-      bash -c "pip install pydantic pydantic-settings structlog pyyaml numpy scikit-learn
-      jinja2 opentelemetry-api opentelemetry-sdk prometheus-client httpx sentence-transformers &&
-      ray start --address=ray-head:6379 --num-cpus=2 --block"
+      bash -c "ray start --address=ray-head:6379 --num-cpus=2
+      --node-ip-address=$$(hostname -i) --block"
     depends_on:
       ray-head:
         condition: service_healthy

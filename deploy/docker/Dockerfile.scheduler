@@ -5,6 +5,10 @@ WORKDIR /app
 COPY pyproject.toml .
 COPY src/ src/
 
+# Make pip resilient to slow/unstable PyPI connections
+ENV PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=10
+
 RUN pip install --no-cache-dir -e .
 
 ENV RAY_ADDRESS=auto
